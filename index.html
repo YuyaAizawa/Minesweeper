@@ -5018,12 +5018,15 @@ var author$project$Main$init = function () {
 	var width = 8;
 	var height = 12;
 	var mines = 40;
-	return A4(
-		author$project$Main$newField,
-		width,
-		height,
-		mines,
-		elm$random$Random$initialSeed(0));
+	return {
+		field: A4(
+			author$project$Main$newField,
+			width,
+			height,
+			mines,
+			elm$random$Random$initialSeed(0)),
+		nextSeed: elm$core$Maybe$Nothing
+	};
 }();
 var elm$core$List$map2 = _List_map2;
 var elm$core$List$indexedMap = F2(
@@ -5063,11 +5066,15 @@ var author$project$Main$coordsToString = function (_n0) {
 	return '(' + (elm$core$String$fromInt(x) + (', ' + (elm$core$String$fromInt(y) + ')')));
 };
 var author$project$Main$msgToString = function (msg) {
-	if (msg.$ === 'Reset') {
-		return 'Reset';
-	} else {
-		var coords = msg.a;
-		return author$project$Main$coordsToString(coords);
+	switch (msg.$) {
+		case 'Reset':
+			return 'Reset';
+		case 'Open':
+			var coords = msg.a;
+			return author$project$Main$coordsToString(coords);
+		default:
+			var str = msg.a;
+			return 'Input ' + str;
 	}
 };
 var elm$core$Basics$apL = F2(
@@ -5075,39 +5082,65 @@ var elm$core$Basics$apL = F2(
 		return f(x);
 	});
 var elm$core$Debug$log = _Debug_log;
+var elm$core$String$toInt = _String_toInt;
 var author$project$Main$update = F2(
 	function (msg, model) {
 		var _n0 = A2(
 			elm$core$Debug$log,
 			'msg',
 			author$project$Main$msgToString(msg));
-		if (msg.$ === 'Reset') {
-			var width = 8;
-			var height = 12;
-			var mines = 40;
-			return A4(
-				author$project$Main$newField,
-				width,
-				height,
-				mines,
-				elm$random$Random$initialSeed(0));
-		} else {
-			var coords = msg.a;
-			return A2(
-				author$project$Main$indexed2Map,
-				function (x) {
-					return function (y) {
-						return function (u) {
-							return _Utils_eq(
-								coords,
-								_Utils_Tuple2(x, y)) ? {opened: true, underground: u.underground} : u;
-						};
-					};
-				},
-				model);
+		switch (msg.$) {
+			case 'Reset':
+				var _n2 = model.nextSeed;
+				if (_n2.$ === 'Nothing') {
+					return model;
+				} else {
+					var seed = _n2.a;
+					var width = 8;
+					var height = 12;
+					var mines = 40;
+					return _Utils_update(
+						model,
+						{
+							field: A4(
+								author$project$Main$newField,
+								width,
+								height,
+								mines,
+								elm$random$Random$initialSeed(seed))
+						});
+				}
+			case 'Open':
+				var coords = msg.a;
+				return _Utils_update(
+					model,
+					{
+						field: A2(
+							author$project$Main$indexed2Map,
+							function (x) {
+								return function (y) {
+									return function (u) {
+										return _Utils_eq(
+											coords,
+											_Utils_Tuple2(x, y)) ? {opened: true, underground: u.underground} : u;
+									};
+								};
+							},
+							model.field)
+					});
+			default:
+				var seed = msg.a;
+				return _Utils_update(
+					model,
+					{
+						nextSeed: elm$core$String$toInt(seed)
+					});
 		}
 	});
 var author$project$Main$Reset = {$: 'Reset'};
+var author$project$Main$Seed = function (a) {
+	return {$: 'Seed', a: a};
+};
 var author$project$Main$Open = function (a) {
 	return {$: 'Open', a: a};
 };
@@ -5517,11 +5550,44 @@ var author$project$Main$mineField = function (model) {
 					};
 				};
 			},
-			model));
+			model.field));
 };
 var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$table = _VirtualDom_node('table');
 var elm$html$Html$tbody = _VirtualDom_node('tbody');
+var elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			elm$virtual_dom$VirtualDom$on,
+			event,
+			elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var elm$json$Json$Decode$field = _Json_decodeField;
+var elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3(elm$core$List$foldr, elm$json$Json$Decode$field, decoder, fields);
+	});
+var elm$json$Json$Decode$string = _Json_decodeString;
+var elm$html$Html$Events$targetValue = A2(
+	elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	elm$json$Json$Decode$string);
+var elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			elm$json$Json$Decode$map,
+			elm$html$Html$Events$alwaysStop,
+			A2(elm$json$Json$Decode$map, tagger, elm$html$Html$Events$targetValue)));
+};
 var author$project$Main$view = function (model) {
 	return A2(
 		elm$html$Html$div,
@@ -5540,6 +5606,14 @@ var author$project$Main$view = function (model) {
 								elm$html$Html$Attributes$type_('button'),
 								elm$html$Html$Events$onClick(author$project$Main$Reset),
 								elm$html$Html$Attributes$value('reset')
+							]),
+						_List_Nil),
+						A2(
+						elm$html$Html$input,
+						_List_fromArray(
+							[
+								elm$html$Html$Attributes$type_('number'),
+								elm$html$Html$Events$onInput(author$project$Main$Seed)
 							]),
 						_List_Nil)
 					])),
@@ -5678,7 +5752,6 @@ var elm$core$String$left = F2(
 		return (n < 1) ? '' : A3(elm$core$String$slice, 0, n, string);
 	});
 var elm$core$String$contains = _String_contains;
-var elm$core$String$toInt = _String_toInt;
 var elm$url$Url$Url = F6(
 	function (protocol, host, port_, path, query, fragment) {
 		return {fragment: fragment, host: host, path: path, port_: port_, protocol: protocol, query: query};

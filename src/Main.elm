@@ -5,7 +5,7 @@ import Random exposing (initialSeed, step)
 import Random.List exposing (shuffle)
 import Html exposing (Html, table, tbody, tr, td, input, div, text)
 import Html.Attributes exposing (disabled, type_, value)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 
 
 main =
@@ -14,9 +14,19 @@ main =
 
 -- MODEL
 
-type alias Model = List (List FieldStatus)
-type alias FieldStatus = { opened : Bool, underground : Underground}
-type Underground = Mine | Empty Int
+type alias Model =
+  { field : List (List FieldStatus)
+  , nextSeed : Maybe Int
+  }
+
+type alias FieldStatus =
+  { opened : Bool
+  , underground : Underground
+  }
+
+type Underground
+  = Mine
+  | Empty Int
 
 init : Model
 init =
@@ -24,7 +34,9 @@ init =
   let height = 12 in
   let mines = 40 in
 
-  newField width height mines (initialSeed 0)
+  { field = newField width height mines (initialSeed 0)
+  , nextSeed =  Nothing
+  }
 
 newField : Int -> Int -> Int -> Random.Seed -> List (List FieldStatus)
 newField width height mines seed =
@@ -69,28 +81,42 @@ newField width height mines seed =
 
 -- UPDATE
 
+type Msg
+  = Reset
+  | Open Coords
+  | Seed String
+
 type alias Coords = (Int, Int)
-type Msg = Reset | Open Coords
 
 update : Msg -> Model -> Model
 update msg model =
   let _ = Debug.log "msg" <| msgToString msg in
   case msg of
-    Reset ->
-      let width = 8 in
-      let height = 12 in
-      let mines = 40 in
-      newField width height mines (initialSeed 0)
+    Reset -> case model.nextSeed of
+      Nothing -> model
+      Just seed ->
+        let width = 8 in
+        let height = 12 in
+        let mines = 40 in
+        { model | field =
+          newField width height mines (initialSeed seed)
+        }
+
     Open coords ->
-      model
-        |> indexed2Map (\x -> \y -> \u -> if coords == (x, y)
-          then {opened = True, underground = u.underground}
-          else u)
+      { model | field =
+        model.field
+          |> indexed2Map (\x -> \y -> \u -> if coords == (x, y)
+            then {opened = True, underground = u.underground}
+            else u)
+      }
+
+    Seed seed -> { model | nextSeed = seed |> String.toInt }
 
 msgToString : Msg -> String
 msgToString msg = case msg of
   Reset -> "Reset"
   Open coords -> coords |> coordsToString
+  Seed str -> "Input " ++ str
 
 coordsToString : Coords -> String
 coordsToString (x, y) =
@@ -108,16 +134,25 @@ indexed2Map f matrix =
 view : Model -> Html Msg
 view model =
   div []
-    [ div [][ input [
-      type_ "button",
-      onClick Reset,
-      value "reset"][]]
-    , table [][
-        tbody [] <| mineField model ]]
+    [ div []
+      [ input
+        [ type_ "button"
+        , onClick Reset
+        , value "reset"
+        ][]
+      , input
+        [ type_ "number"
+        , onInput Seed
+        ][]
+      ]
+    , table []
+      [ tbody [] <| mineField model
+      ]
+    ]
 
 mineField : Model -> List (Html Msg)
 mineField model =
-  model
+  model.field
     |> indexed2Map (\x -> \y -> \f -> td [][coordButton (x, y) f])
     |> map (tr [])
 
