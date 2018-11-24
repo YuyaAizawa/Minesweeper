@@ -5019,7 +5019,7 @@ var elm$random$Random$initialSeed = function (x) {
 var author$project$Main$init = function () {
 	var width = 8;
 	var height = 12;
-	var mines = 40;
+	var mines = 30;
 	return {
 		clickTo: author$project$Main$Dig,
 		field: A4(
@@ -5127,7 +5127,7 @@ var author$project$Main$update = F2(
 					var seed = _n2.a;
 					var width = 8;
 					var height = 12;
-					var mines = 40;
+					var mines = 30;
 					return _Utils_update(
 						model,
 						{
@@ -5566,7 +5566,7 @@ var author$project$Main$coordButton = F2(
 			var _n0 = field.surface;
 			switch (_n0.$) {
 				case 'Covered':
-					return author$project$Main$coordsToString(coords);
+					return '\u3000';
 				case 'Flagged':
 					return '\ud83d\udea9';
 				default:

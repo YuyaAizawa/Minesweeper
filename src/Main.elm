@@ -38,7 +38,7 @@ init : Model
 init =
   let width = 8 in
   let height = 12 in
-  let mines = 40 in
+  let mines = 30 in
 
   { field = newField width height mines (initialSeed 0)
   , nextSeed =  Nothing
@@ -115,7 +115,7 @@ update msg model =
       Just seed ->
         let width = 8 in
         let height = 12 in
-        let mines = 40 in
+        let mines = 30 in
         { model | field =
           newField width height mines (initialSeed seed)
         }
@@ -196,7 +196,7 @@ coordButton : Coords -> FieldStatus -> Html Msg
 coordButton coords field =
   let
     txt = case field.surface of
-      Covered -> coordsToString coords
+      Covered -> "\u{3000}"
       Flagged -> "\u{1F6A9}"
       Uncovered -> case field.underground of
         Mine -> "\u{1F4A3}"
