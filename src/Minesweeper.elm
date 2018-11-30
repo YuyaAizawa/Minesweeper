@@ -1,3 +1,5 @@
+module Minesweeper exposing (..)
+
 import Browser
 import List exposing (..)
 import Maybe exposing (withDefault)
@@ -102,7 +104,6 @@ type ClickTo
 
 update : Msg -> Model -> Model
 update msg model =
-  let _ = Debug.log "msg" <| msgToString msg in
   let
     updateField coords updater field =
       field |> indexed2Map (\x -> \y -> \f -> if (coords == (x, y))
